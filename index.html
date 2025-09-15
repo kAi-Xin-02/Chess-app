@@ -1,4 +1,258 @@
-<!DOCTYPE html>
+// Advanced chess engine with real chess logic
+            startChessEngine() {
+                this.engineData = {
+                    pieceValues: { 'p': 100, 'n': 320, 'b': 330, 'r': 500, 'q': 900, 'k': 20000 },
+                    positionTables: this.initializePositionTables()
+                };
+            }
+
+            initializePositionTables() {
+                return {
+                    'p': [ // Pawn position values
+                        [0,  0,  0,  0,  0,  0,  0,  0],
+                        [50, 50, 50, 50, 50, 50, 50, 50],
+                        [10, 10, 20, 30, 30, 20, 10, 10],
+                        [5,  5, 10, 25, 25, 10,  5,  5],
+                        [0,  0,  0, 20, 20,  0,  0,  0],
+                        [5, -5,-10,  0,  0,-10, -5,  5],
+                        [5, 10, 10,-20,-20, 10, 10,  5],
+                        [0,  0,  0,  0,  0,  0,  0,  0]
+                    ],
+                    'n': [ // Knight position values
+                        [-50,-40,-30,-30,-30,-30,-40,-50],
+                        [-40,-20,  0,  0,  0,  0,-20,-40],
+                        [-30,  0, 10, 15, 15, 10,  0,-30],
+                        [-30,  5, 15, 20, 20, 15,  5,-30],
+                        [-30,  0, 15, 20, 20, 15,  0,-30],
+                        [-30,  5, 10, 15, 15, 10,  5,-30],
+                        [-40,-20,  0,  5,  5,  0,-20,-40],
+                        [-50,-40,-30,-30,-30,-30,-40,-50]
+                    ],
+                    'b': [ // Bishop position values
+                        [-20,-10,-10,-10,-10,-10,-10,-20],
+                        [-10,  0,  0,  0,  0,  0,  0,-10],
+                        [-10,  0,  5, 10, 10,  5,  0,-10],
+                        [-10,  5,  5, 10, 10,  5,  5,-10],
+                        [-10,  0, 10, 10, 10, 10,  0,-10],
+                        [-10, 10, 10, 10, 10, 10, 10,-10],
+                        [-10,  5,  0,  0,  0,  0,  5,-10],
+                        [-20,-10,-10,-10,-10,-10,-10,-20]
+                    ],
+                    'r': [ // Rook position values
+                        [0,  0,  0,  0,  0,  0,  0,  0],
+                        [5, 10, 10, 10, 10, 10, 10,  5],
+                        [-5,  0,  0,  0,  0,  0,  0, -5],
+                        [-5,  0,  0,  0,  0,  0,  0, -5],
+                        [-5,  0,  0,  0,  0,  0,  0, -5],
+                        [-5,  0,  0,  0,  0,  0,  0, -5],
+                        [-5,  0,  0,  0,  0,  0,  0, -5],
+                        [0,  0,  0,  5,  5,  0,  0,  0]
+                    ],
+                    'q': [ // Queen position values
+                        [-20,-10,-10, -5, -5,-10,-10,-20],
+                        [-10,  0,  0,  0,  0,  0,  0,-10],
+                        [-10,  0,  5,  5,  5,  5,  0,-10],
+                        [-5,  0,  5,  5,  5,  5,  0, -5],
+                        [0,  0,  5,  5,  5,  5,  0, -5],
+                        [-10,  5,  5,  5,  5,  5,  0,-10],
+                        [-10,  0,  5,  0,  0,  0,  0,-10],
+                        [-20,-10,-10, -5, -5,-10,-10,-20]
+                    ],
+                    'k': [ // King position values
+                        [-30,-40,-40,-50,-50,-40,-40,-30],
+                        [-30,-40,-40,-50,-50,-40,-40,-30],
+                        [-30,-40,-40,-50,-50,-40,-40,-30],
+                        [-30,-40,-40,-50,-50,-40,-40,-30],
+                        [-20,-30,-30,-40,-40,-30,-30,-20],
+                        [-10,-20,-20,-20,-20,-20,-20,-10],
+                        [20, 20,  0,  0,  0,  0, 20, 20],
+                        [20, 30, 10,  0,  0, 10, 30, 20]
+                    ]
+                };
+            }
+
+            calculateBestMove() {
+                if (!this.isOwner || this.gameStatus !== 'active') return;
+                
+                console.log('Calculating best move for owner...');
+                
+                // Generate all possible moves for current player
+                const possibleMoves = this.generateAllPossibleMoves(this.currentPlayer);
+                
+                if (possibleMoves.length === 0) {
+                    console.log('No possible moves found');
+                    return;
+                }
+                
+                // Evaluate each move using minimax algorithm
+                let bestMove = null;
+                let bestScore = -Infinity;
+                
+                for (const move of possibleMoves) {
+                    const score = this.evaluateMove(move, 3); // Depth 3 search
+                    
+                    if (score > bestScore) {
+                        bestScore = score;
+                        bestMove = move;
+                    }
+                }
+                
+                this.bestMove = bestMove;
+                this.positionEvaluation = bestScore / 100; // Convert to standard evaluation format
+                
+                if (this.bestMove) {
+                    const piece = this.board[this.bestMove.from.row][this.bestMove.from.col];
+                    const moveNotation = this.getMoveNotation(this.bestMove.from, this.bestMove.to, piece, 
+                        this.board[this.bestMove.to.row][this.bestMove.to.col]);
+                    
+                    document.getElementById('bestMoveDisplay').textContent = moveNotation;
+                    document.getElementById('positionEval').textContent = 
+                        (this.positionEvaluation >= 0 ? '+' : '') + this.positionEvaluation.toFixed(2);
+                    
+                    this.highlightBestMove();
+                    console.log('Best move calculated:', moveNotation, 'Score:', this.positionEvaluation);
+                } else {
+                    document.getElementById('bestMoveDisplay').textContent = 'No good moves';
+                }
+            }
+
+            generateAllPossibleMoves(player) {
+                const moves = [];
+                const isWhite = player === 'white';
+                
+                for (let fromRow = 0; fromRow < 8; fromRow++) {
+                    for (let fromCol = 0; fromCol < 8; fromCol++) {
+                        const piece = this.board[fromRow][fromCol];
+                        
+                        if (piece && ((isWhite && piece === piece.toUpperCase()) || 
+                                     (!isWhite && piece === piece.toLowerCase()))) {
+                            
+                            // Generate moves for this piece
+                            const pieceMoves = this.generatePieceMoves(piece, fromRow, fromCol);
+                            moves.push(...pieceMoves);
+                        }
+                    }
+                }
+                
+                return moves;
+            }
+
+            generatePieceMoves(piece, fromRow, fromCol) {
+                const moves = [];
+                const pieceType = piece.toLowerCase();
+                
+                switch (pieceType) {
+                    case 'p':
+                        moves.push(...this.generatePawnMoves(piece, fromRow, fromCol));
+                        break;
+                    case 'r':
+                        moves.push(...this.generateRookMoves(fromRow, fromCol));
+                        break;
+                    case 'n':
+                        moves.push(...this.generateKnightMoves(fromRow, fromCol));
+                        break;
+                    case 'b':
+                        moves.push(...this.generateBishopMoves(fromRow, fromCol));
+                        break;
+                    case 'q':
+                        moves.push(...this.generateQueenMoves(fromRow, fromCol));
+                        break;
+                    case 'k':
+                        moves.push(...this.generateKingMoves(fromRow, fromCol));
+                        break;
+                }
+                
+                return moves.filter(move => this.isValidMove({ row: fromRow, col: fromCol }, move.to));
+            }
+
+            generatePawnMoves(piece, fromRow, fromCol) {
+                const moves = [];
+                const isWhite = piece === piece.toUpperCase();
+                const direction = isWhite ? -1 : 1;
+                const startRow = isWhite ? 6 : 1;
+                
+                // Forward moves
+                if (this.isInBounds(fromRow + direction, fromCol) && !this.board[fromRow + direction][fromCol]) {
+                    moves.push({ from: { row: fromRow, col: fromCol }, to: { row: fromRow + direction, col: fromCol } });
+                    
+                    // Double move from start
+                    if (fromRow === startRow && !this.board[fromRow + 2 * direction][fromCol]) {
+                        moves.push({ from: { row: fromRow, col: fromCol }, to: { row: fromRow + 2 * direction, col: fromCol } });
+                    }
+                }
+                
+                // Captures
+                for (const colOffset of [-1, 1]) {
+                    const newRow = fromRow + direction;
+                    const newCol = fromCol + colOffset;
+                    
+                    if (this.isInBounds(newRow, newCol) && this.board[newRow][newCol] && 
+                        this.isOpponentPiece(this.board[newRow][newCol], piece)) {
+                        moves.push({ from: { row: fromRow, col: fromCol }, to: { row: newRow, col: newCol } });
+                    }
+                }
+                
+                return moves;
+            }
+
+            generateRookMoves(fromRow, fromCol) {
+                const moves = [];
+                const directions = [[0, 1], [0, -1], [1, 0], [-1, 0]];
+                
+                for (const [rowDir, colDir] of directions) {
+                    for (let i = 1; i < 8; i++) {
+                        const newRow = fromRow + i * rowDir;
+                        const newCol = fromCol + i * colDir;
+                        
+                        if (!this.isInBounds(newRow, newCol)) break;
+                        
+                        if (!this.board[newRow][newCol]) {
+                            moves.push({ from: { row: fromRow, col: fromCol }, to: { row: newRow, col: newCol } });
+                        } else {
+                            if (this.isOpponentPiece(this.board[newRow][newCol], this.board[fromRow][fromCol])) {
+                                moves.push({ from: { row: fromRow, col: fromCol }, to: { row: newRow, col: newCol } });
+                            }
+                            break;
+                        }
+                    }
+                }
+                
+                return moves;
+            }
+
+            generateKnightMoves(fromRow, fromCol) {
+                const moves = [];
+                const knightMoves = [[-2, -1], [-2, 1], [-1, -2], [-1, 2], [1, -2], [1, 2], [2, -1], [2, 1]];
+                
+                for (const [rowOffset, colOffset] of knightMoves) {
+                    const newRow = fromRow + rowOffset;
+                    const newCol = fromCol + colOffset;
+                    
+                    if (this.isInBounds(newRow, newCol) && 
+                        (!this.board[newRow][newCol] || 
+                         this.isOpponentPiece(this.board[newRow][newCol], this.board[fromRow][fromCol]))) {
+                        moves.push({ from: { row: fromRow, col: fromCol }, to: { row: newRow, col: newCol } });
+                    }
+                }
+                
+                return moves;
+            }
+
+            generateBishopMoves(fromRow, fromCol) {
+                const moves = [];
+                const directions = [[1, 1], [1, -1], [-1, 1], [-1, -1]];
+                
+                for (const [rowDir, colDir] of directions) {
+                    for (let i = 1; i < 8; i++) {
+                        const newRow = fromRow + i * rowDir;
+                        const newCol = fromCol + i * colDir;
+                        
+                        if (!this.isInBounds(newRow, newCol)) break;
+                        
+                        if (!this.board[newRow][newCol]) {
+                            moves.push({ from: { row: fromRow, col: fromCol }, to: { row: newRow, col: newCol } });
+                        } else {
+                            if (this.isOpponentPiece(this.board[newRow][newCol], this.board[fromRow][fromCol]<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
